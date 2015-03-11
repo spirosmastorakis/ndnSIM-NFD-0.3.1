@@ -62,6 +62,7 @@ volunteers.
 
     * Syed Obaid Amin     <http://obaidamin.weebly.com/>
     * Vince Lehman        <vslehman@memphis.edu>
+    * Minsheng Zhang      <mzhang4@memphis.edu>
     * Lan Wang            <http://www.cs.memphis.edu/~lanwang/>
 
 ## Project contributors
@@ -71,3 +72,4 @@ people who have reported bugs, submitted patches, and implemented new features
 in the library:
 
 * Tai-Lin Chu             <https://www.linkedin.com/pub/tai-lin-chu/55/5b2/669>
+* Spyridon Mastorakis     <http://cs.ucla.edu/~mastorakis/>

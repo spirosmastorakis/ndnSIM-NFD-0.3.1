@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -39,7 +39,7 @@ InternalFace::InternalFace()
 void
 InternalFace::sendInterest(const Interest& interest)
 {
-  onSendInterest(interest);
+  this->emitSignal(onSendInterest, interest);
 
   // Invoke .processInterest a bit later,
   // to avoid potential problems in forwarding pipelines.
@@ -122,7 +122,7 @@ InternalFace::processInterest(const shared_ptr<const Interest>& interest)
 void
 InternalFace::sendData(const Data& data)
 {
-  onSendData(data);
+  this->emitSignal(onSendData, data);
 }
 
 void
@@ -142,7 +142,7 @@ InternalFace::setInterestFilter(const Name& filter,
 void
 InternalFace::put(const Data& data)
 {
-  onReceiveData(data);
+  this->emitSignal(onReceiveData, data);
 }
 
 InternalFace::~InternalFace()

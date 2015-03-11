@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -51,14 +51,17 @@
 
 #include <cstddef>
 #include <list>
+#include <map>
 #include <set>
 #include <queue>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <ndn-cxx/common.hpp>
 #include <ndn-cxx/interest.hpp>
 #include <ndn-cxx/data.hpp>
-#include <ndn-cxx/util/event-emitter.hpp> // deprecated
+#include <ndn-cxx/util/face-uri.hpp>
 #include <ndn-cxx/util/signal.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -77,7 +80,6 @@ using boost::noncopyable;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::weak_ptr;
-using std::bad_weak_ptr;
 using std::make_shared;
 using std::enable_shared_from_this;
 
@@ -95,7 +97,7 @@ using ndn::Data;
 using ndn::Name;
 using ndn::Exclude;
 using ndn::Block;
-using ndn::util::EventEmitter; // deprecated
+using ndn::util::FaceUri;
 
 namespace tlv {
 // Don't write "namespace tlv = ndn::tlv", because NFD can add other members into this namespace.

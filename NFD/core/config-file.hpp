@@ -91,7 +91,7 @@ public:
   /**
    * \param input configuration (as a string) to parse
    * \param isDryRun true if performing a dry run of configuration, false otherwise
-   * \param filename optional convenience argument to provide more detailed error messages
+   * \param filename logical filename of the config file, can appear in error messages
    * \throws ConfigFile::Error if file not found
    * \throws ConfigFile::Error if parse error
    */
@@ -101,7 +101,7 @@ public:
   /**
    * \param input stream to parse
    * \param isDryRun true if performing a dry run of configuration, false otherwise
-   * \param filename optional convenience argument to provide more detailed error messages
+   * \param filename logical filename of the config file, can appear in error messages
    * \throws ConfigFile::Error if parse error
    */
   void

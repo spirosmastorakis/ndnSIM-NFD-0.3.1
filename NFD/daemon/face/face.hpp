@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -27,11 +27,10 @@
 #define NFD_DAEMON_FACE_FACE_HPP
 
 #include "common.hpp"
+#include "core/logger.hpp"
 #include "face-counters.hpp"
 
-#include <ndn-cxx/util/face-uri.hpp>
 #include <ndn-cxx/management/nfd-face-status.hpp>
-#include <ndn-cxx/management/nfd-face-event-notification.hpp>
 
 namespace nfd {
 
@@ -52,7 +51,6 @@ const FaceId FACEID_NULL = 255;
 /// upper bound of reserved FaceIds
 const FaceId FACEID_RESERVED_MAX = 255;
 
-using ndn::util::FaceUri;
 
 /** \brief represents a face
  */
@@ -72,25 +70,26 @@ public:
     }
   };
 
-  Face(const FaceUri& remoteUri, const FaceUri& localUri, bool isLocal = false);
+  Face(const FaceUri& remoteUri, const FaceUri& localUri,
+       bool isLocal = false, bool isMultiAccess = false);
 
   virtual
   ~Face();
 
   /// fires when an Interest is received
-  EventEmitter<Interest> onReceiveInterest;
+  signal::Signal<Face, Interest> onReceiveInterest;
 
   /// fires when a Data is received
-  EventEmitter<Data> onReceiveData;
+  signal::Signal<Face, Data> onReceiveData;
 
   /// fires when an Interest is sent out
-  EventEmitter<Interest> onSendInterest;
+  signal::Signal<Face, Interest> onSendInterest;
 
   /// fires when a Data is sent out
-  EventEmitter<Data> onSendData;
+  signal::Signal<Face, Data> onSendData;
 
   /// fires when face disconnects or fails to perform properly
-  EventEmitter<std::string/*reason*/> onFail;
+  signal::Signal<Face, std::string/*reason*/> onFail;
 
   /// send an Interest
   virtual void
@@ -112,16 +111,17 @@ public: // attributes
   FaceId
   getId() const;
 
-  /** \brief Set the description
-   *
-   *  This is typically invoked by mgmt on set description command
+  /** \brief Get the description
    */
-  virtual void
-  setDescription(const std::string& description);
-
-  /// Get the description
-  virtual const std::string&
+  const std::string&
   getDescription() const;
+
+  /** \brief Set the face description
+   *
+   *  This is typically invoked by management on set description command
+   */
+  void
+  setDescription(const std::string& description);
 
   void
   setMetric(uint64_t metric);
@@ -134,11 +134,14 @@ public: // attributes
   bool
   isLocal() const;
 
-  /** \brief Get whether packets sent this Face may reach multiple peers
-   *
-   *  In this base class this property is always false.
+  /** \brief Get whether face is created on demand or explicitly via FaceManagement protocol
    */
-  virtual bool
+  bool
+  isOnDemand() const;
+
+  /** \brief Get whether packets sent by this face may reach multiple peers
+   */
+  bool
   isMultiAccess() const;
 
   /** \brief Get whether underlying communication is up
@@ -147,11 +150,6 @@ public: // attributes
    */
   virtual bool
   isUp() const;
-
-  /** \brief Get whether face is created on demand or explicitly via FaceManagement protocol
-   */
-  bool
-  isOnDemand() const;
 
   const FaceCounters&
   getCounters() const;
@@ -177,34 +175,41 @@ public: // attributes
   virtual ndn::nfd::FaceStatus
   getFaceStatus() const;
 
-protected:
-  // this is a non-virtual method
-  bool
-  decodeAndDispatchInput(const Block& element);
-
-  FaceCounters&
-  getMutableCounters();
-
+PUBLIC_WITH_TESTS_ELSE_PROTECTED:
   void
   setOnDemand(bool isOnDemand);
+
+protected:
+  bool
+  decodeAndDispatchInput(const Block& element);
 
   /** \brief fail the face and raise onFail event if it's UP; otherwise do nothing
    */
   void
   fail(const std::string& reason);
 
+  FaceCounters&
+  getMutableCounters();
+
+  DECLARE_SIGNAL_EMIT(onReceiveInterest)
+  DECLARE_SIGNAL_EMIT(onReceiveData)
+  DECLARE_SIGNAL_EMIT(onSendInterest)
+  DECLARE_SIGNAL_EMIT(onSendData)
+
 private:
+  // this method should be used only by the FaceTable
   void
   setId(FaceId faceId);
 
 private:
   FaceId m_id;
   std::string m_description;
-  bool m_isLocal; // for scoping purposes
   FaceCounters m_counters;
-  FaceUri m_remoteUri;
-  FaceUri m_localUri;
+  const FaceUri m_remoteUri;
+  const FaceUri m_localUri;
+  const bool m_isLocal;
   bool m_isOnDemand;
+  const bool m_isMultiAccess;
   bool m_isFailed;
   uint64_t m_metric;
 
@@ -212,10 +217,52 @@ private:
   friend class FaceTable;
 };
 
+inline FaceId
+Face::getId() const
+{
+  return m_id;
+}
+
+inline void
+Face::setId(FaceId faceId)
+{
+  m_id = faceId;
+}
+
+inline const std::string&
+Face::getDescription() const
+{
+  return m_description;
+}
+
+inline void
+Face::setDescription(const std::string& description)
+{
+  m_description = description;
+}
+
 inline bool
 Face::isLocal() const
 {
   return m_isLocal;
+}
+
+inline bool
+Face::isOnDemand() const
+{
+  return m_isOnDemand;
+}
+
+inline void
+Face::setOnDemand(bool isOnDemand)
+{
+  m_isOnDemand = isOnDemand;
+}
+
+inline bool
+Face::isMultiAccess() const
+{
+  return m_isMultiAccess;
 }
 
 inline const FaceCounters&
@@ -242,17 +289,38 @@ Face::getLocalUri() const
   return m_localUri;
 }
 
-inline void
-Face::setOnDemand(bool isOnDemand)
-{
-  m_isOnDemand = isOnDemand;
-}
 
-inline bool
-Face::isOnDemand() const
-{
-  return m_isOnDemand;
-}
+/** \defgroup FaceLogging Face logging macros
+ *
+ * These macros augment the log message with some face-specific information,
+ * such as the face ID, that are useful to distinguish which face produced the
+ * message. It is strongly recommended to use these macros instead of the
+ * generic ones for all logging inside Face subclasses.
+ * @{
+ */
+
+#define NFD_LOG_FACE(level, msg)                        \
+  NFD_LOG_##level("[id=" << this->getId() <<            \
+                  ",local=" << this->getLocalUri() <<   \
+                  ",remote=" << this->getRemoteUri() << \
+                  "] " << msg)
+
+/** \brief Log a message at TRACE level */
+#define NFD_LOG_FACE_TRACE(msg) NFD_LOG_FACE(TRACE, msg)
+
+/** \brief Log a message at DEBUG level */
+#define NFD_LOG_FACE_DEBUG(msg) NFD_LOG_FACE(DEBUG, msg)
+
+/** \brief Log a message at INFO level */
+#define NFD_LOG_FACE_INFO(msg)  NFD_LOG_FACE(INFO,  msg)
+
+/** \brief Log a message at WARN level */
+#define NFD_LOG_FACE_WARN(msg)  NFD_LOG_FACE(WARN,  msg)
+
+/** \brief Log a message at ERROR level */
+#define NFD_LOG_FACE_ERROR(msg) NFD_LOG_FACE(ERROR, msg)
+
+/** @} */
 
 inline void
 Face::setMetric(uint64_t metric)

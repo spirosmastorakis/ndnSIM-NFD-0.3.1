@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -31,6 +31,7 @@ namespace nfd {
 namespace fw {
 
 const Name NccStrategy::STRATEGY_NAME("ndn:/localhost/nfd/strategy/ncc/%FD%01");
+NFD_REGISTER_STRATEGY(NccStrategy);
 
 NccStrategy::NccStrategy(Forwarder& forwarder, const Name& name)
   : Strategy(forwarder, name)
@@ -84,9 +85,14 @@ NccStrategy::afterReceiveInterest(const Face& inFace,
       bind(&NccStrategy::timeoutOnBestFace, this, weak_ptr<pit::Entry>(pitEntry)));
   }
   else {
-    // use first nexthop
-    this->sendInterest(pitEntry, nexthops.begin()->getFace());
-    // TODO avoid sending to inFace
+    // use first eligible nexthop
+    auto firstEligibleNexthop = std::find_if(nexthops.begin(), nexthops.end(),
+        [&pitEntry] (const fib::NextHop& nexthop) {
+          return pitEntry->canForwardTo(*nexthop.getFace());
+        });
+    if (firstEligibleNexthop != nexthops.end()) {
+      this->sendInterest(pitEntry, firstEligibleNexthop->getFace());
+    }
   }
 
   shared_ptr<Face> previousFace = measurementsEntryInfo->previousFace.lock();

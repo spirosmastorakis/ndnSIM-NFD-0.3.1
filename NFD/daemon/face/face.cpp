@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -24,58 +24,29 @@
  */
 
 #include "face.hpp"
-#include "core/logger.hpp"
+
+#include <ndn-cxx/management/nfd-face-event-notification.hpp>
 
 namespace nfd {
 
-Face::Face(const FaceUri& remoteUri, const FaceUri& localUri, bool isLocal)
+Face::Face(const FaceUri& remoteUri, const FaceUri& localUri, bool isLocal, bool isMultiAccess)
   : m_id(INVALID_FACEID)
-  , m_isLocal(isLocal)
   , m_remoteUri(remoteUri)
   , m_localUri(localUri)
+  , m_isLocal(isLocal)
   , m_isOnDemand(false)
+  , m_isMultiAccess(isMultiAccess)
   , m_isFailed(false)
   , m_metric(0)
 {
-  onReceiveInterest += [this](const ndn::Interest&) { ++m_counters.getNInInterests(); };
-  onReceiveData     += [this](const ndn::Data&) {     ++m_counters.getNInDatas(); };
-  onSendInterest    += [this](const ndn::Interest&) { ++m_counters.getNOutInterests(); };
-  onSendData        += [this](const ndn::Data&) {     ++m_counters.getNOutDatas(); };
+  onReceiveInterest.connect([this] (const ndn::Interest&) { ++m_counters.getNInInterests(); });
+  onReceiveData    .connect([this] (const ndn::Data&)     { ++m_counters.getNInDatas(); });
+  onSendInterest   .connect([this] (const ndn::Interest&) { ++m_counters.getNOutInterests(); });
+  onSendData       .connect([this] (const ndn::Data&)     { ++m_counters.getNOutDatas(); });
 }
 
 Face::~Face()
 {
-}
-
-FaceId
-Face::getId() const
-{
-  return m_id;
-}
-
-// this method is private and should be used only by the FaceTable
-void
-Face::setId(FaceId faceId)
-{
-  m_id = faceId;
-}
-
-void
-Face::setDescription(const std::string& description)
-{
-  m_description = description;
-}
-
-const std::string&
-Face::getDescription() const
-{
-  return m_description;
-}
-
-bool
-Face::isMultiAccess() const
-{
-  return false;
 }
 
 bool
@@ -107,7 +78,7 @@ Face::decodeAndDispatchInput(const Block& element)
 
     return true;
   }
-  catch (tlv::Error&) {
+  catch (const tlv::Error&) {
     return false;
   }
 }
@@ -121,8 +92,6 @@ Face::fail(const std::string& reason)
 
   m_isFailed = true;
   this->onFail(reason);
-
-  this->onFail.clear();
 }
 
 template<typename FaceTraits>
@@ -130,22 +99,14 @@ void
 Face::copyStatusTo(FaceTraits& traits) const
 {
   traits.setFaceId(getId())
-    .setRemoteUri(getRemoteUri().toString())
-    .setLocalUri(getLocalUri().toString());
-
-  if (isLocal()) {
-    traits.setFaceScope(ndn::nfd::FACE_SCOPE_LOCAL);
-  }
-  else {
-    traits.setFaceScope(ndn::nfd::FACE_SCOPE_NON_LOCAL);
-  }
-
-  if (isOnDemand()) {
-    traits.setFacePersistency(ndn::nfd::FACE_PERSISTENCY_ON_DEMAND);
-  }
-  else {
-    traits.setFacePersistency(ndn::nfd::FACE_PERSISTENCY_PERSISTENT);
-  }
+        .setRemoteUri(getRemoteUri().toString())
+        .setLocalUri(getLocalUri().toString())
+        .setFaceScope(isLocal() ? ndn::nfd::FACE_SCOPE_LOCAL
+                                : ndn::nfd::FACE_SCOPE_NON_LOCAL)
+        .setFacePersistency(isOnDemand() ? ndn::nfd::FACE_PERSISTENCY_ON_DEMAND
+                                         : ndn::nfd::FACE_PERSISTENCY_PERSISTENT)
+        .setLinkType(isMultiAccess() ? ndn::nfd::LINK_TYPE_MULTI_ACCESS
+                                     : ndn::nfd::LINK_TYPE_POINT_TO_POINT);
 }
 
 template void
@@ -158,11 +119,11 @@ ndn::nfd::FaceStatus
 Face::getFaceStatus() const
 {
   ndn::nfd::FaceStatus status;
-  copyStatusTo(status);
 
+  copyStatusTo(status);
   this->getCounters().copyTo(status);
 
   return status;
 }
 
-} //namespace nfd
+} // namespace nfd

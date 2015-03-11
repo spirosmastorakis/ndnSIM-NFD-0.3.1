@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -27,17 +27,18 @@
 #define NFD_DAEMON_FW_BEST_ROUTE_STRATEGY2_HPP
 
 #include "strategy.hpp"
+#include "retx-suppression-exponential.hpp"
 
 namespace nfd {
 namespace fw {
 
-/** \brief Best Route strategy version 2
+/** \brief Best Route strategy version 3
  *
  *  This strategy forwards a new Interest to the lowest-cost nexthop (except downstream).
- *  After that, it recognizes consumer retransmission:
- *  if a similar Interest arrives from any downstream after MIN_RETRANSMISSION_INTERVAL,
- *  the strategy forwards the Interest again to the lowest-cost nexthop (except downstream)
- *  that is not previously used. If all nexthops have been used, the strategy starts over.
+ *  After that, if consumer retransmits the Interest (and is not suppressed according to
+ *  exponential backoff algorithm), the strategy forwards the Interest again to
+ *  the lowest-cost nexthop (except downstream) that is not previously used.
+ *  If all nexthops have been used, the strategy starts over.
  */
 class BestRouteStrategy2 : public Strategy
 {
@@ -52,7 +53,9 @@ public:
 
 public:
   static const Name STRATEGY_NAME;
-  static const time::milliseconds MIN_RETRANSMISSION_INTERVAL;
+
+private:
+  RetxSuppressionExponential m_retxSuppression;
 };
 
 } // namespace fw
